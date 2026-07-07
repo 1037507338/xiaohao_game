@@ -1,0 +1,21 @@
+lib/figures.ts
+  s_1bc5a75e067deb::t_35109e74256178 252,257-258,267-268
+  s_1bc5a75e067deb::t_d5073cd0efcbd7 329-500
+  s_1bc5a75e067deb::t_aad244a8d58a2f 838-976
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "7826fe567dce40992f49a01aa402f57bde8aefc7",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { createSession } from "@/lib/session";
-import { getFigure } from "@/lib/figures";
+import { FIGURES, getFigure } from "@/lib/figures";
+import { encodeToken } from "@/lib/gameToken";
 
 export async function POST() {
-  const session = createSession();
-  const target = getFigure(session.targetId);
+  const target = FIGURES[Math.floor(Math.random() * FIGURES.length)];
+  const token = encodeToken({ targetId: target.id });
+
   return NextResponse.json({
-    sessionId: session.id,
+    token,
     maxGuesses: 20,
-    // 仅暴露非泄露性元信息，供前端展示
     hintMeta: { dynastyHint: "古代名人" },
-    // 调试用：正式环境不要返回答案
-    _debugAnswer: process.env.NODE_ENV !== "production" ? target?.name : undefined,
+    // 调试用：正式环境不返回答案
+    _debugAnswer: process.env.NODE_ENV !== "production" ? getFigure(target.id)?.name : undefined,
   });
 }

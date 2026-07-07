@@ -14,7 +14,7 @@ interface GuessResult {
 const MAX_GUESSES = 20;
 
 export default function Home() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [guesses, setGuesses] = useState<GuessResult[]>([]);
   const [won, setWon] = useState(false);
@@ -28,41 +28,41 @@ export default function Home() {
     setInput("");
     const res = await fetch("/api/new-game", { method: "POST" });
     const data = await res.json();
-    setSessionId(data.sessionId);
-    return data.sessionId as string;
+    setToken(data.token);
+    return data.token as string;
   }
 
   useEffect(() => {
     newGame();
   }, []);
 
-  async function postGuess(sid: string, g: string) {
+  async function postGuess(tok: string, g: string) {
     return fetch("/api/guess", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: sid, guess: g }),
+      body: JSON.stringify({ token: tok, guess: g }),
     });
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const g = input.trim();
-    if (!g || !sessionId || won || loading) return;
+    if (!g || !token || won || loading) return;
     setLoading(true);
     setError(null);
     try {
-      let res = await postGuess(sessionId, g);
-      // session 失效（如服务重启/换实例）时自动重开一局并重试一次
+      let res = await postGuess(token, g);
+      // token 失效（如密钥轮换/篡改）时自动重开一局并重试一次
       if (res.status === 404) {
-        const freshSid = await newGame();
-        res = await postGuess(freshSid, g);
+        const freshToken = await newGame();
+        res = await postGuess(freshToken, g);
       }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "出错了");
         return;
       }
-      // 用返回结果重建列表（后端负责去重）
+      // 后端无状态，只返回单次结果；列表去重与胜负判断在前端维护
       setGuesses((prev) => {
         const next = prev.filter(
           (p) => p.canonicalName !== data.result.canonicalName || p.known !== data.result.known
@@ -70,7 +70,7 @@ export default function Home() {
         next.push(data.result);
         return next;
       });
-      setWon(data.won);
+      if (data.result.matched) setWon(true);
       setInput("");
     } finally {
       setLoading(false);
@@ -91,7 +91,7 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={won ? "已猜中！" : "输入一个人物名称…"}
-            disabled={won || !sessionId}
+            disabled={won || !token}
           />
           <button className="guess-btn" disabled={won || loading || !input.trim()}>
             {loading ? "…" : "猜"}

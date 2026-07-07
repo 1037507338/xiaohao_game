@@ -45,15 +45,25 @@ function computeScore(guess: Figure, target: Figure): number {
   return Math.max(0, Math.min(99, Math.round(score * 10000) / 10000));
 }
 
-function buildHint(guess: Figure, target: Figure): string | undefined {
-  // 暗示而非明示：只点出朝代/身份等维度上的共同点，不泄露具体关系或事件
+function buildHint(guess: Figure, target: Figure, score: number): string | undefined {
+  // 暗示强度随分数递增：极近可点破具体关系，较远只给宽泛维度
+  const rel = target.relations[guess.id] ?? guess.relations[target.id];
+  if (score >= 80 && rel) return rel; // 关系极近：直接给出具体关联
+
   const sameDynasty = guess.dynasty === target.dynasty;
+  const sharedTag = guess.tags.find((t) => target.tags.includes(t));
   const sharedRole = guess.roles.find((r) => target.roles.includes(r));
 
+  if (score >= 45) {
+    // 较近：给较具体共同点（共享事件/流派标签，或同代同职）
+    if (sharedTag) return `同涉「${sharedTag}」`;
+    if (sameDynasty && sharedRole) return `同为${guess.dynasty}代${sharedRole}`;
+  }
+  // 稍远：只给宽泛维度
   if (sameDynasty && sharedRole) return `与目标同为${guess.dynasty}代${sharedRole}`;
   if (sharedRole) return `与目标同为${sharedRole}`;
   if (sameDynasty) return `与目标同属${guess.dynasty}代`;
-  // 完全无共同点：不强行给方向
+  // 很远/无共同点：不强行给方向
   return undefined;
 }
 
@@ -75,12 +85,13 @@ export const mockScorer: Scorer = {
     }
 
     const matched = guess.id === target.id;
+    const score = computeScore(guess, target);
     return {
-      score: computeScore(guess, target),
+      score,
       matched,
       known: true,
       canonicalName: guess.name,
-      hint: matched ? undefined : buildHint(guess, target),
+      hint: matched ? undefined : buildHint(guess, target, score),
     };
   },
 };

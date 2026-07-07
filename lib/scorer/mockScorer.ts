@@ -24,21 +24,31 @@ function overlap<T>(a: T[], b: T[]): number {
  * - 同朝代 / 同身份 / 共享 tag → 叠加
  * - 未识别人物 → 低分兜底
  */
+// 顶级关系关键词：血缘/终身绑定/生死宿敌/核心君臣，应逼近满分
+const TOP_TIER = [
+  "父子", "母子", "父女", "母女", "夫妻", "兄弟", "姊妹", "祖孙",
+  "生死", "宿敌", "对手", "所害", "构陷", "诛", "所杀", "反目",
+  "并称", "双璧", "师徒", "君臣",
+];
+
 function computeScore(guess: Figure, target: Figure): number {
   if (guess.id === target.id) return 100;
 
   let score = 8; // 已识别人物的基础分
 
   const rel = target.relations[guess.id] ?? guess.relations[target.id];
-  if (rel) score += 45; // 显式关系权重最高
+  if (rel) {
+    // 顶级关系（父子/夫妻/生死宿敌等）给到 92-98，其余显式关系给较高分
+    score += TOP_TIER.some((k) => rel.includes(k)) ? 88 : 60;
+  }
 
-  if (guess.dynasty === target.dynasty) score += 22;
+  if (guess.dynasty === target.dynasty) score += 12;
 
   const roleHit = overlap(guess.roles, target.roles);
-  score += roleHit * 12;
+  score += roleHit * 8;
 
   const tagHit = overlap(guess.tags, target.tags);
-  score += tagHit * 9;
+  score += tagHit * 7;
 
   score += jitter(`${guess.id}|${target.id}`);
 
@@ -48,7 +58,7 @@ function computeScore(guess: Figure, target: Figure): number {
 function buildHint(guess: Figure, target: Figure, score: number): string | undefined {
   // 暗示强度随分数递增：极近可点破具体关系，较远只给宽泛维度
   const rel = target.relations[guess.id] ?? guess.relations[target.id];
-  if (score >= 80 && rel) return rel; // 关系极近：直接给出具体关联
+  if (score >= 75 && rel) return rel; // 关系极近：直接给出具体关联
 
   const sameDynasty = guess.dynasty === target.dynasty;
   const sharedTag = guess.tags.find((t) => target.tags.includes(t));

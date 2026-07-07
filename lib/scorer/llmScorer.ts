@@ -14,14 +14,16 @@ interface LlmJudge {
   canonicalName: string; // 规范化后的人物名
 }
 
-const SYSTEM_PROMPT = `你是中国历史人物关联度评估器。给定「目标人物」和用户「猜测输入」，评估两者的历史关联紧密度。
+const SYSTEM_PROMPT = `你是中国历史人物关联度评估器。给定「目标人物」（含其权威身份资料）和用户「猜测输入」，评估两者的历史关联紧密度。
+用户消息会提供目标人物的【朝代】和【身份】作为权威事实，你【必须以此为准】，不得凭记忆臆断目标的身份。例如资料写明目标身份为「权臣」，就绝不能说目标是「帝王」。
 只输出一个 JSON 对象，字段：
 - score: 0-100 的数字，可带小数。关系越紧密越高。直系亲属/君臣核心/生死对手→80-97；同朝代同领域→40-70；仅同朝代→20-40；同为古代人物但无交集→5-20。绝不要输出100（100 仅用于同一人，由系统判定）。
-- hint: 不超过14字的文言风格【暗示】，只点出「猜测人物」与「目标人物」在某个维度上的相同或相近之处，用于隐晦地帮玩家缩小范围。是暗示不是明示：
-  【只允许】指出二者在以下维度的共同点：朝代/时代远近、领域（如军政、文坛、思想、医道）、身份职业（如帝王、名将、谋士、诗人）、生平际遇、性格气质。例：「同属盛唐」「皆为开国之君」「同居庙堂」「俱以诗名世」「同为乱世枭雄」「性皆刚烈」。
-  【严禁】点破二者的具体关系（君臣、父子、师徒、并称、对手、同一事件等）——例如绝不能写「李杜双璧」「君臣相得」「玄武门对手」「孔老并称」，这类等于泄露答案。
+- hint: 不超过14字的文言风格【暗示】，只点出「猜测人物」与「目标人物」在某个维度上真实存在的相同或相近之处，用于隐晦地帮玩家缩小范围。是暗示不是明示：
+  【必须基于事实】只有当猜测者与目标在该维度确实相同才可写。例如目标身份是「权臣」，猜测者是「帝王」，二者身份不同，绝不能写「皆为帝王」；此时可从其他真实共同点入手（如同朝代→「同属某代」、同为掌权者→「同居庙堂」），若无共同点则返回空串。
+  【只允许】指出二者在以下维度的共同点：朝代/时代远近、领域（军政、文坛、思想、医道等）、身份职业（帝王、名将、权臣、谋士、诗人等）、生平际遇、性格气质。例：「同属盛唐」「皆为开国之君」「同居庙堂」「俱以诗名世」。
+  【严禁】点破二者的具体关系（君臣、父子、师徒、并称、对手、同一事件等）——如「李杜双璧」「君臣相得」「玄武门对手」，等于泄露答案。
   【严禁】只描述猜测者自身（如「一代名臣」），也不得说出目标姓名。
-  若二者毫无共同点（不同朝代且领域身份性格皆不同），hint 返回空字符串 ""，不要强行编造方向。
+  若二者毫无共同点，hint 返回空字符串 ""，不要强行编造。
 - isPerson: 猜测输入是否为一个真实存在过的中国历史人物（true/false）。乱写/非人名→false。
 - canonicalName: 将猜测输入规范化为最常见的本名（如「唐太宗」→「李世民」）；若非人物，原样返回输入。
 只输出 JSON，不要解释。`;
@@ -55,7 +57,11 @@ function refineScore(raw: number, seed: string): number {
   return Math.max(0, Math.min(99, Math.round(base * 10000) / 10000));
 }
 
-async function callLlm(targetName: string, guess: string): Promise<LlmJudge> {
+function factLine(f: { name: string; dynasty: string; roles: string[] }): string {
+  return `${f.name}（朝代：${f.dynasty}；身份：${f.roles.join("、")}）`;
+}
+
+async function callLlm(userContent: string): Promise<LlmJudge> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -70,7 +76,7 @@ async function callLlm(targetName: string, guess: string): Promise<LlmJudge> {
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `目标人物：${targetName}\n猜测输入：${guess}` },
+          { role: "user", content: userContent },
         ],
       }),
       signal: controller.signal,
@@ -84,9 +90,7 @@ async function callLlm(targetName: string, guess: string): Promise<LlmJudge> {
       hint: typeof parsed.hint === "string" ? parsed.hint : "",
       isPerson: parsed.isPerson !== false,
       canonicalName:
-        typeof parsed.canonicalName === "string" && parsed.canonicalName.trim()
-          ? parsed.canonicalName.trim()
-          : guess.trim(),
+        typeof parsed.canonicalName === "string" ? parsed.canonicalName.trim() : "",
     };
   } finally {
     clearTimeout(timer);
@@ -110,12 +114,17 @@ export const llmScorer: Scorer = {
     }
 
     try {
-      const judge = await callLlm(target.name, guessInput);
+      // 注入目标的权威身份，避免模型臆断目标是谁；猜测者若在库中也一并给出事实
+      const targetFact = `目标人物：${factLine(target)}`;
+      const guessFact = localHit
+        ? `猜测输入：${factLine(localHit)}`
+        : `猜测输入：${guessInput}`;
+      const judge = await callLlm(`${targetFact}\n${guessFact}`);
       return {
         score: refineScore(judge.score, `${target.id}|${localHit?.id ?? guessInput}`),
         matched: false,
         known: judge.isPerson,
-        canonicalName: localHit?.name ?? judge.canonicalName,
+        canonicalName: localHit?.name || judge.canonicalName || guessInput.trim(),
         hint: judge.hint || undefined,
       };
     } catch {

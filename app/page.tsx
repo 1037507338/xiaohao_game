@@ -21,7 +21,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function newGame() {
+  async function newGame(): Promise<string> {
     setError(null);
     setGuesses([]);
     setWon(false);
@@ -29,11 +29,20 @@ export default function Home() {
     const res = await fetch("/api/new-game", { method: "POST" });
     const data = await res.json();
     setSessionId(data.sessionId);
+    return data.sessionId as string;
   }
 
   useEffect(() => {
     newGame();
   }, []);
+
+  async function postGuess(sid: string, g: string) {
+    return fetch("/api/guess", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: sid, guess: g }),
+    });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,11 +51,12 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/guess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, guess: g }),
-      });
+      let res = await postGuess(sessionId, g);
+      // session 失效（如服务重启/换实例）时自动重开一局并重试一次
+      if (res.status === 404) {
+        const freshSid = await newGame();
+        res = await postGuess(freshSid, g);
+      }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "出错了");

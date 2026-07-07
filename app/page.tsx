@@ -185,7 +185,7 @@ export default function Home() {
           </span>
           {best && !won && (
             <span className="best" style={{ color: heatColor(best.score) }}>
-              最接近 {best.canonicalName} · {best.score.toFixed(2)}%
+              最接近 {best.canonicalName} · {best.score.toFixed(4)}%
             </span>
           )}
         </div>
@@ -258,7 +258,7 @@ export default function Home() {
                 <span className="hint">{g.hint ?? ""}</span>
                 <span className="pct" style={{ color: g.matched ? undefined : color }}>
                   {!g.matched && <em className="heat-label">{heatLabel(g.score)}</em>}
-                  <b>{g.score.toFixed(g.matched ? 0 : 2)}%</b>
+                  <b>{g.score.toFixed(g.matched ? 0 : 4)}%</b>
                 </span>
                 {!g.matched && (
                   <span className="bar">

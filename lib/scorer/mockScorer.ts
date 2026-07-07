@@ -46,19 +46,15 @@ function computeScore(guess: Figure, target: Figure): number {
 }
 
 function buildHint(guess: Figure, target: Figure): string | undefined {
-  const rel = target.relations[guess.id] ?? guess.relations[target.id];
-  if (rel) return rel;
+  // 暗示而非明示：只点出朝代/身份等维度上的共同点，不泄露具体关系或事件
+  const sameDynasty = guess.dynasty === target.dynasty;
+  const sharedRole = guess.roles.find((r) => target.roles.includes(r));
 
-  // 无显式关系时，用「与目标的共性」表述关联，而非描述猜测者自身
-  const sharedTags = guess.tags.filter((t) => target.tags.includes(t));
-  if (sharedTags.length) return `与目标同涉「${sharedTags[0]}」`;
-
-  if (guess.dynasty === target.dynasty) {
-    const sharedRole = guess.roles.find((r) => target.roles.includes(r));
-    if (sharedRole) return `与目标同为${guess.dynasty}代${sharedRole}`;
-    return `与目标同属${guess.dynasty}代`;
-  }
-  return "与目标时代相隔，无明显关联";
+  if (sameDynasty && sharedRole) return `与目标同为${guess.dynasty}代${sharedRole}`;
+  if (sharedRole) return `与目标同为${sharedRole}`;
+  if (sameDynasty) return `与目标同属${guess.dynasty}代`;
+  // 完全无共同点：不强行给方向
+  return undefined;
 }
 
 export const mockScorer: Scorer = {

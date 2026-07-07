@@ -1,0 +1,19 @@
+app/page.tsx
+  s_1bc5a75e067deb::t_4b21624673bade 24,32,39-46,54-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "152f6481e1cd5a66a8de46f5c8a9ed88992837c1",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

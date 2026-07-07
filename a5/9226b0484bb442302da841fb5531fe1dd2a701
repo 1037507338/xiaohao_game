@@ -1,0 +1,21 @@
+app/globals.css
+  s_1bc5a75e067deb::t_600575f6c60d01 82-88,90-100,109-128,132,134-135,139,141-159,170,175,180-192,199-211,218,222,225-289,303
+app/page.tsx
+  s_1bc5a75e067deb::t_9b195147cacb47 3,16-42,50-52,59-60,64,84-93,107,110,112,115-116,118,125,135,141,144,148-157,163-164,172-178,180-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "a59226b0484bb442302da841fb5531fe1dd2a701",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+lib/scorer/mockScorer.ts
+  s_1bc5a75e067deb::t_e5cea16e468f7f 48-52,54,57-62,66
+  s_1bc5a75e067deb::t_bcbab0e6f09e8d 88,90,94
+lib/scorer/llmScorer.ts
+  s_1bc5a75e067deb::t_ef6b556b2cf95d 21-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "6402c0168bb7c71d3b5941efeb3ca5c7d8daf413",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { findFigure, getFigure, normalizeName } from "@/lib/figures";
 import type { Scorer, ScoreResult } from "./types";
 import { mockScorer } from "./mockScorer";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const BASE_URL = process.env.LLM_BASE_URL ?? "";
 const API_KEY = process.env.LLM_API_KEY ?? "";
@@ -98,13 +99,6 @@ async function callLlm(userContent: string): Promise<LlmJudge> {
   }
 }
 
-// 结果缓存：分数确定性，同一 (目标, 猜测) 结果恒定，命中即秒回、零花费。
-// 挂 globalThis 避免不同 route bundle / 热重载各自实例化。
-// 单实例内有效；后续可平滑替换为 Redis/KV 实现跨实例共享。
-const gc = globalThis as unknown as { __gfScoreCache?: Map<string, ScoreResult> };
-const CACHE: Map<string, ScoreResult> = (gc.__gfScoreCache ??= new Map());
-const CACHE_MAX = 5000;
-
 export const llmScorer: Scorer = {
   async score(guessInput: string, targetId: string): Promise<ScoreResult> {
     const target = getFigure(targetId);
@@ -124,7 +118,7 @@ export const llmScorer: Scorer = {
     // 缓存键：目标 + 规范化后的猜测（库内用 id，库外用归一化文本）
     const guessKey = localHit?.id ?? normalizeName(guessInput);
     const cacheKey = `${target.id}|${guessKey}`;
-    const cached = CACHE.get(cacheKey);
+    const cached = await cacheGet<ScoreResult>(cacheKey);
     if (cached) return cached;
 
     let result: ScoreResult;
@@ -147,8 +141,7 @@ export const llmScorer: Scorer = {
       return mockScorer.score(guessInput, targetId);
     }
 
-    if (CACHE.size >= CACHE_MAX) CACHE.clear(); // 简单容量保护
-    CACHE.set(cacheKey, result);
+    await cacheSet(cacheKey, result);
     return result;
   },
 };

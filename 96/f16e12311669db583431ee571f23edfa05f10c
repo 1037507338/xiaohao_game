@@ -1,0 +1,24 @@
+app/page.tsx
+  s_1bc5a75e067deb::t_76701b83cb6408 188
+  s_1bc5a75e067deb::t_814ae7ac72e7b7 261
+lib/scorer/llmScorer.ts
+  s_1bc5a75e067deb::t_5c17e20edd5af7 20-24
+lib/scorer/mockScorer.ts
+  s_1bc5a75e067deb::t_0cc39431e961ce 49-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "96f16e12311669db583431ee571f23edfa05f10c",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

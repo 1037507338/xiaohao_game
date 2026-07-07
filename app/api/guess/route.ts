@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { decodeToken } from "@/lib/gameToken";
-import { mockScorer } from "@/lib/scorer/mockScorer";
+import { getScorer } from "@/lib/scorer";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid token" }, { status: 404 });
   }
 
-  const result = await mockScorer.score(guess, payload.targetId);
+  const result = await getScorer().score(guess, payload.targetId);
 
   return NextResponse.json({
     result: { ...result, guess: guess.trim() },

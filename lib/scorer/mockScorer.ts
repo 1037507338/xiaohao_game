@@ -49,15 +49,16 @@ function buildHint(guess: Figure, target: Figure): string | undefined {
   const rel = target.relations[guess.id] ?? guess.relations[target.id];
   if (rel) return rel;
 
+  // 无显式关系时，用「与目标的共性」表述关联，而非描述猜测者自身
   const sharedTags = guess.tags.filter((t) => target.tags.includes(t));
-  if (sharedTags.length) return `同涉「${sharedTags[0]}」`;
+  if (sharedTags.length) return `与目标同涉「${sharedTags[0]}」`;
 
   if (guess.dynasty === target.dynasty) {
     const sharedRole = guess.roles.find((r) => target.roles.includes(r));
-    if (sharedRole) return `同为${guess.dynasty}代${sharedRole}`;
-    return `同属${guess.dynasty}代`;
+    if (sharedRole) return `与目标同为${guess.dynasty}代${sharedRole}`;
+    return `与目标同属${guess.dynasty}代`;
   }
-  return undefined;
+  return "与目标时代相隔，无明显关联";
 }
 
 export const mockScorer: Scorer = {

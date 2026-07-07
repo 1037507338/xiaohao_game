@@ -1,0 +1,27 @@
+lib/scorer/llmScorer.ts
+  s_1bc5a75e067deb::t_1dd1b634ce3b68 4
+  s_1bc5a75e067deb::t_7bdbdea345ba2d 121
+  s_1bc5a75e067deb::t_be2f4459fd6494 144
+.env.example
+  s_1bc5a75e067deb::t_cb036e2b5bdf0b 9-12
+lib/cache.ts
+  s_1bc5a75e067deb::t_7ab66d0b3fce11 1-49
+package-lock.json
+  ai_agent 11,672-680,965-969
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "08bf3d421d68851464b7c45d278e26a80225188a",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

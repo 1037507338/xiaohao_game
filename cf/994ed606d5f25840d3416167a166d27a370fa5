@@ -1,0 +1,23 @@
+lib/scorer/llmScorer.ts
+  s_1bc5a75e067deb::t_1acccfdd8d25a3 93
+  s_1bc5a75e067deb::t_b774550f40ba33 60-64,79
+  s_1bc5a75e067deb::t_b91ca1a6104275 127
+  s_1bc5a75e067deb::t_41275d8e7cd0c8 117-122
+  s_1bc5a75e067deb::t_ee85a4a01b28e8 17-18,21-24,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "cf994ed606d5f25840d3416167a166d27a370fa5",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}

@@ -9,6 +9,10 @@ interface GuessResult {
   known: boolean;
   canonicalName: string;
   hint?: string;
+  /** 该人物被猜过的次数（含重复），用于请求变体提示 */
+  attempts?: number;
+  /** 已展示过的历史提示，重复猜测时用于避免重复 */
+  pastHints?: string[];
 }
 
 interface Answer {
@@ -47,7 +51,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
-  const [dupName, setDupName] = useState<string | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [revealing, setRevealing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +61,6 @@ export default function Home() {
     setWon(false);
     setInput("");
     setLastName(null);
-    setDupName(null);
     setAnswer(null);
     const res = await fetch("/api/new-game", { method: "POST" });
     const data = await res.json();
@@ -71,11 +73,11 @@ export default function Home() {
     newGame();
   }, []);
 
-  async function postGuess(tok: string, g: string) {
+  async function postGuess(tok: string, g: string, variant = 0, avoid: string[] = []) {
     return fetch("/api/guess", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: tok, guess: g }),
+      body: JSON.stringify({ token: tok, guess: g, variant, avoid }),
     });
   }
 
@@ -100,21 +102,18 @@ export default function Home() {
     const g = input.trim();
     if (!g || !token || won || loading) return;
 
+    // 重复猜测：不再拦截，而是重新获取一个不同的提示
     const existed = guesses.find((p) => p.guess === g || p.canonicalName === g);
-    if (existed) {
-      setDupName(existed.canonicalName);
-      setInput("");
-      setTimeout(() => setDupName(null), 1200);
-      return;
-    }
+    const variant = existed ? (existed.attempts ?? 1) : 0;
+    const avoid = existed?.pastHints ?? (existed?.hint ? [existed.hint] : []);
 
     setLoading(true);
     setError(null);
     try {
-      let res = await postGuess(token, g);
+      let res = await postGuess(token, g, variant, avoid);
       if (res.status === 404) {
         const freshToken = await newGame();
-        res = await postGuess(freshToken, g);
+        res = await postGuess(freshToken, g, variant, avoid);
       }
       const data = await res.json();
       if (!res.ok) {
@@ -123,10 +122,23 @@ export default function Home() {
       }
       const result: GuessResult = data.result;
       setGuesses((prev) => {
+        const prior = prev.find(
+          (p) => p.canonicalName === result.canonicalName && p.known === result.known
+        );
+        const merged: GuessResult = {
+          ...result,
+          // 重复猜测只换提示，分数沿用首次结果（关系未变，分数应稳定）
+          score: prior ? prior.score : result.score,
+          attempts: (prior?.attempts ?? 0) + 1,
+          pastHints: [
+            ...(prior?.pastHints ?? []),
+            ...(result.hint ? [result.hint] : []),
+          ].slice(-8),
+        };
         const next = prev.filter(
           (p) => p.canonicalName !== result.canonicalName || p.known !== result.known
         );
-        next.push(result);
+        next.push(merged);
         return next;
       });
       setLastName(result.canonicalName);
@@ -244,7 +256,6 @@ export default function Home() {
               g.matched ? "matched" : "",
               !g.known ? "unknown" : "",
               g.canonicalName === lastName ? "just" : "",
-              g.canonicalName === dupName ? "dup" : "",
             ]
               .filter(Boolean)
               .join(" ");
@@ -254,6 +265,7 @@ export default function Home() {
                 <span className="name">
                   {g.canonicalName}
                   {!g.known && <em className="tag-unknown">查无此人</em>}
+                  {(g.attempts ?? 1) > 1 && <em className="tag-retry">×{g.attempts}</em>}
                 </span>
                 <span className="hint">{g.hint ?? ""}</span>
                 <span className="pct" style={{ color: g.matched ? undefined : color }}>

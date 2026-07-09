@@ -1,5 +1,5 @@
 import { findFigure, getFigure, normalizeName } from "@/lib/figures";
-import type { Scorer, ScoreResult } from "./types";
+import type { Scorer, ScoreResult, ScoreOptions } from "./types";
 import { mockScorer } from "./mockScorer";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
@@ -25,11 +25,11 @@ const SYSTEM_PROMPT = `你是中国历史人物关联度评估器。给定「目
   · 【弱关联 → 20-40】仅同朝代，或仅同一身份领域（隔代同为名将）。
   · 【几乎无关 → 5-20】同为古代人物但朝代领域皆不同。
   绝不要输出 100（100 仅用于同一人，由系统判定）。
-- hint: 不超过14字的文言风格提示，帮玩家缩小范围。【暗示强度随 score 递增】——越接近（分越高）越明确，越疏远（分越低）越模糊：
-  · score ≥ 75（关系极近）：可较明确点出二者的具体关联，如「生死对峙」「父子文章」「君臣相知」「同门骨肉」「诗坛双璧」——给玩家有力线索，但仍不得直接说出目标姓名。
-  · 45 ≤ score < 75（较近）：点出较具体的共同点，如领域相同+互动倾向，「同殿为臣」「沙场宿将」「同代文宗」「政见相争」，但不完全点破关系。
-  · 20 ≤ score < 45（稍远）：只给宽泛维度的共同点，如朝代或身份，「同属北宋」「皆为名将」「同居庙堂」。
-  · score < 20（很远）：极模糊或不给方向，如「同属古代」，或若毫无共同点则返回空串 ""。
+- hint: 6~12字的文言风格提示，帮玩家缩小范围（尽量写满，信息更充分，但不超过12字）。【暗示强度随 score 递增】——越接近（分越高）越明确，越疏远（分越低）越模糊：
+  · score ≥ 75（关系极近）：可较明确点出二者的具体关联，如「生死对峙数十载」「同门治学称三苏」「君臣共开贞观治」「诗坛齐名称双璧」——给玩家有力线索，但仍不得直接说出目标姓名。
+  · 45 ≤ score < 75（较近）：点出较具体的共同点，如领域相同+互动倾向，「同殿为臣议朝政」「沙场宿将各为主」「同代文宗领风骚」「变法政见相争锋」，但不完全点破关系。
+  · 20 ≤ score < 45（稍远）：只给宽泛维度的共同点，如朝代或身份，「同属北宋之名臣」「皆为开疆之名将」「俱在庙堂居高位」。
+  · score < 20（很远）：极模糊或不给方向，如「同为古代之人物」，或若毫无共同点则返回空串 ""。
   【必须基于事实】只能写猜测者与目标真实存在的共同点/关系。例如目标身份是「权臣」而猜测者是「帝王」，二者身份不同，绝不能写「皆为帝王」。
   【严禁】只描述猜测者自身（如「一代名臣」），也不得说出目标姓名。若二者毫无共同点，返回空字符串 ""，不要强行编造。
 - isPerson: 猜测输入是否为一个真实存在过的中国历史人物（true/false）。乱写/非人名→false。
@@ -69,7 +69,7 @@ function factLine(f: { name: string; dynasty: string; roles: string[] }): string
   return `${f.name}（朝代：${f.dynasty}；身份：${f.roles.join("、")}）`;
 }
 
-async function callLlm(userContent: string): Promise<LlmJudge> {
+async function callLlm(userContent: string, extraSystem?: string): Promise<LlmJudge> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -83,7 +83,7 @@ async function callLlm(userContent: string): Promise<LlmJudge> {
         model: MODEL,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: extraSystem ? `${SYSTEM_PROMPT}\n${extraSystem}` : SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
       }),
@@ -106,7 +106,7 @@ async function callLlm(userContent: string): Promise<LlmJudge> {
 }
 
 export const llmScorer: Scorer = {
-  async score(guessInput: string, targetId: string): Promise<ScoreResult> {
+  async score(guessInput: string, targetId: string, opts?: ScoreOptions): Promise<ScoreResult> {
     const target = getFigure(targetId);
     if (!target) throw new Error(`unknown target: ${targetId}`);
 
@@ -124,8 +124,13 @@ export const llmScorer: Scorer = {
     // 缓存键：目标 + 规范化后的猜测（库内用 id，库外用归一化文本）
     const guessKey = localHit?.id ?? normalizeName(guessInput);
     const cacheKey = `${target.id}|${guessKey}`;
-    const cached = await cacheGet<ScoreResult>(cacheKey);
-    if (cached) return cached;
+    const isVariant = (opts?.variant ?? 0) > 0;
+
+    // 首次猜测走缓存；重复猜测（variant>0）跳过缓存，重取一个不同提示
+    if (!isVariant) {
+      const cached = await cacheGet<ScoreResult>(cacheKey);
+      if (cached) return cached;
+    }
 
     let result: ScoreResult;
     try {
@@ -134,8 +139,18 @@ export const llmScorer: Scorer = {
       const guessFact = localHit
         ? `猜测输入：${factLine(localHit)}`
         : `猜测输入：${guessInput}`;
-      const judge = await callLlm(`${targetFact}\n${guessFact}`);
+      let extraSystem: string | undefined;
+      if (isVariant) {
+        const avoid = (opts?.avoid ?? []).filter(Boolean);
+        extraSystem =
+          `【本次为重复猜测】玩家再次输入了同一人物，请换一个角度、用不同措辞重写 hint，` +
+          `保持 score 与之前一致的量级（关系没变），但 hint 必须与以下已给过的提示明显不同：` +
+          (avoid.length ? avoid.map((h) => `「${h}」`).join("、") : "（无）") +
+          `。可从另一维度（时代/领域/事件/性格/际遇）切入。`;
+      }
+      const judge = await callLlm(`${targetFact}\n${guessFact}`, extraSystem);
       result = {
+        // 分数用确定性种子，保证重复猜测分数稳定不变（关系未变）
         score: refineScore(judge.score, cacheKey),
         matched: false,
         known: judge.isPerson,
@@ -144,10 +159,11 @@ export const llmScorer: Scorer = {
       };
     } catch {
       // LLM 失败/超时 → 回退本地 mock，保证线上不崩（失败结果不缓存）
-      return mockScorer.score(guessInput, targetId);
+      return mockScorer.score(guessInput, targetId, opts);
     }
 
-    await cacheSet(cacheKey, result);
+    // 只缓存首次结果；重复猜测的变体提示不覆盖缓存
+    if (!isVariant) await cacheSet(cacheKey, result);
     return result;
   },
 };

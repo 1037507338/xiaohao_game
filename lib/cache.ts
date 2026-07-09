@@ -17,7 +17,7 @@ const mem: Map<string, unknown> = (g.__gfMemCache ??= new Map());
 const MEM_MAX = 5000;
 
 // 版本号：算分逻辑变更时递增，使旧缓存自然失效（键不再命中）
-const PREFIX = "gf:score:v2:";
+const PREFIX = "gf:score:v3:";
 const TTL_SECONDS = 60 * 60 * 24 * 30; // 30 天
 
 export async function cacheGet<T>(key: string): Promise<T | null> {

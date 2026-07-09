@@ -1,5 +1,5 @@
 import { findFigure, getFigure, normalizeName, type Figure } from "@/lib/figures";
-import type { Scorer, ScoreResult } from "./types";
+import type { Scorer, ScoreResult, ScoreOptions } from "./types";
 
 /** 确定性抖动：同一对 (guess,target) 每次结果一致，但分数不整齐，观感更自然 */
 function jitter(seed: string): number {
@@ -55,30 +55,38 @@ function computeScore(guess: Figure, target: Figure): number {
   return Math.max(0, Math.min(99, Math.round(score * 10000) / 10000));
 }
 
-function buildHint(guess: Figure, target: Figure, score: number): string | undefined {
-  // 暗示强度随分数递增：极近可点破具体关系，较远只给宽泛维度
+/** 收集从强到弱的候选提示，variant 决定取哪一个（重复猜测轮换出不同提示） */
+function buildHint(
+  guess: Figure,
+  target: Figure,
+  score: number,
+  variant = 0
+): string | undefined {
+  const cands: string[] = [];
   const rel = target.relations[guess.id] ?? guess.relations[target.id];
-  if (score >= 75 && rel) return rel; // 关系极近：直接给出具体关联
-
   const sameDynasty = guess.dynasty === target.dynasty;
-  const sharedTag = guess.tags.find((t) => target.tags.includes(t));
+  const sharedTags = guess.tags.filter((t) => target.tags.includes(t));
   const sharedRole = guess.roles.find((r) => target.roles.includes(r));
 
+  if (score >= 75 && rel) cands.push(rel); // 关系极近：具体关联
   if (score >= 45) {
-    // 较近：给较具体共同点（共享事件/流派标签，或同代同职）
-    if (sharedTag) return `同涉「${sharedTag}」`;
-    if (sameDynasty && sharedRole) return `同为${guess.dynasty}代${sharedRole}`;
+    for (const t of sharedTags) cands.push(`同涉「${t}」`);
+    if (sameDynasty && sharedRole) cands.push(`同为${guess.dynasty}代${sharedRole}`);
   }
-  // 稍远：只给宽泛维度
-  if (sameDynasty && sharedRole) return `与目标同为${guess.dynasty}代${sharedRole}`;
-  if (sharedRole) return `与目标同为${sharedRole}`;
-  if (sameDynasty) return `与目标同属${guess.dynasty}代`;
-  // 很远/无共同点：不强行给方向
-  return undefined;
+  // 宽泛维度（各分数档都可作兜底/轮换项）
+  if (sameDynasty && sharedRole) cands.push(`与目标同为${guess.dynasty}代${sharedRole}`);
+  if (sharedRole) cands.push(`与目标同为${sharedRole}`);
+  if (sameDynasty) cands.push(`与目标同属${guess.dynasty}代`);
+
+  // 去重
+  const uniq = [...new Set(cands)];
+  if (!uniq.length) return undefined;
+  // 重复猜测按 variant 轮换；超出候选数则回到最后一个
+  return uniq[Math.min(variant, uniq.length - 1)];
 }
 
 export const mockScorer: Scorer = {
-  async score(guessInput: string, targetId: string): Promise<ScoreResult> {
+  async score(guessInput: string, targetId: string, opts?: ScoreOptions): Promise<ScoreResult> {
     const target = getFigure(targetId);
     if (!target) throw new Error(`unknown target: ${targetId}`);
 
@@ -101,7 +109,7 @@ export const mockScorer: Scorer = {
       matched,
       known: true,
       canonicalName: guess.name,
-      hint: matched ? undefined : buildHint(guess, target, score),
+      hint: matched ? undefined : buildHint(guess, target, score, opts?.variant ?? 0),
     };
   },
 };

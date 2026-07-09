@@ -1,0 +1,43 @@
+lib/scorer/types.ts
+  s_1bc5a75e067deb::t_939ae96f11d88a 14-20,26,28
+lib/cache.ts
+  s_1bc5a75e067deb::t_f76670814df429 20
+app/globals.css
+  s_1bc5a75e067deb::t_b8792905b4871e 425,433,437-438,440-441,444-448,451-454,461-462,470-471,474
+  s_1bc5a75e067deb::t_26b83ed39669d3 399,401-402,406-407,409
+  s_1bc5a75e067deb::t_44c7c168b968b3 393
+app/api/guess/route.ts
+  s_1bc5a75e067deb::t_f503ea63f00ea7 9-13,25
+lib/scorer/llmScorer.ts
+  s_1bc5a75e067deb::t_2e8eea8ac665c2 109,127-133,142-151,153,162,165-166
+  s_1bc5a75e067deb::t_cb2cc792e0ea7a 72
+  s_1bc5a75e067deb::t_7340c6b0c486d7 86
+  s_1bc5a75e067deb::t_0c07bf7260442a 2
+  s_1bc5a75e067deb::t_fbcbdccb29d9d3 28-32
+lib/scorer/mockScorer.ts
+  s_1bc5a75e067deb::t_e9f42785c78f14 2
+  s_1bc5a75e067deb::t_e02d896651794e 58-65,68,71,73-74,76-85
+  s_1bc5a75e067deb::t_792b7a22343649 89,112
+app/page.tsx
+  s_1bc5a75e067deb::t_e38800ce574e7d 268
+  s_1bc5a75e067deb::t_b2e262010cd1ae 76,80
+  s_1bc5a75e067deb::t_cca1cc91a45538 12-15
+  s_1bc5a75e067deb::t_c13d7dd8de84dd 130-131
+  s_1bc5a75e067deb::t_27234a1174030b 105,107-108,113,116,125-129,132-137,141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "a65b1e5e1c83488a2f0d0495667b7afa50f9e416",
+  "prompts": {},
+  "sessions": {
+    "s_1bc5a75e067deb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d964e1aa-5aa7-4b42-a4dc-8a177a73337e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "saisi <saisi@xiaohongshu.com>"
+    }
+  }
+}
